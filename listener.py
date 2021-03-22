@@ -31,13 +31,13 @@ Excitement = ['#excitement', '#excited', '#exciting', '#soexcited', '🤗', '#en
 Happy = ['#happy', '#happytoday', '#behappy', '#happyme', '😀', '☺']
 Pleasant = ['#pleasant', '#pleasantsurprise', '#pleasantweather', '#pleasantlysuprised', '😌']
 badSurprise = ['#disappointment ', '#disappointed', '#takenaback', '😞']
-fear = ['#fear', '#disgust', '#fears', '#anxiety', '😨', '#scared','#anxious']
+fear = ['#fear', '#disgust', '#fears', '#anxiety', '😨', '#scared', '#anxious']
 angry = ['#anger', '#angry', '#angers', '#angerissues', '#angerfist', '😡', '🤬', '😠']
 
-currentWords = angry
+currentWords = angry  ##input the categoty you want to search
 otherWords = Excitement + Happy + Pleasant + badSurprise + fear + angry
 print(otherWords)
-for word in currentWords:
+for word in currentWords:  # removes words that are being searched for from validation
     otherWords.remove(word)
 
 consumer_key = "0PH6TtHoBum8pZ0P8oOpoQix8"
@@ -50,20 +50,17 @@ api = tweepy.API(auth, wait_on_rate_limit=True)
 
 client = pymongo.MongoClient()
 db = client.emotions
-emotionDatabase = db.angrytweets
+emotionDatabase = db.newangrytweets  ##name the database what you want
 
 
 class myStreamListener(tweepy.StreamListener):
     def on_status(self, status):
-        try:
+        try:  ##if there is a extended tweet
             checker = 1
             fulltext = str(status.extended_tweet["full_text"])
             fulltext = fulltext.replace('\n', ' ').replace('\r', '')
-            #  print(fulltext)
-            fulltext = contractions.fix(fulltext)
-            #  print(fulltext)
+            fulltext = contractions.fix(fulltext)  ##removes contractions from the text
             fulltext = cleaner(fulltext)
-            #    print(fulltext)
             status._json["clean"] = fulltext
             for word in otherWords:
 
@@ -71,32 +68,29 @@ class myStreamListener(tweepy.StreamListener):
                     print("overlap")
                     checker = 0
                     pass
-            # print(fulltext)
+
             if checker == 1:
                 if emotionDatabase.count_documents({'clean': status._json["clean"]}) < 1:
                     print(status._json["clean"])
                     emotionDatabase.insert_one(status._json)
-        except AttributeError:
+        except AttributeError:  ##if there is no extended tweet
             checker = 1
             fulltext = str(status.text)
             fulltext = fulltext.replace('\n', ' ').replace('\r', '')
-            # print(fulltext)
             fulltext = contractions.fix(fulltext)
-            # print(fulltext)
             fulltext = cleaner(fulltext)
-            # print(fulltext)
             status._json["clean"] = fulltext
             for word in otherWords:
                 if word in status._json["clean"]:
                     print("overlap")
-                    checker = 0
+                    checker = 0  ##if overlap found
                     pass
-            if checker == 1:
+            if checker == 1:  ##if no overlap found
                 if emotionDatabase.count_documents({'clean': status._json["clean"]}) < 1:
                     print(status._json["clean"])
                     emotionDatabase.insert_one(status._json)
 
-        if emotionDatabase.estimated_document_count() > 299:
+        if emotionDatabase.estimated_document_count() > 299:  ##if the database has more then 299 tweets then stop
             myStream.disconnect()
             print("disconected")
 
@@ -104,17 +98,6 @@ class myStreamListener(tweepy.StreamListener):
         print(status_code)  # 420 means to many
 
 
-# print(happytweets.estimated_document_count())
-# user_cursor = happytweets.distinct("text")
-# print(user_cursor)
-# print(len(user_cursor))
-
-# for words in otherWords:
-#    if words in user_cursor.text:
-
-
 myStreamListener = myStreamListener()
 myStream = tweepy.Stream(auth=api.auth, listener=myStreamListener)
 myStream.filter(track=currentWords, languages=['en'])
-# myStream.disconect()
-# (happytweets.estimated_document_count())
